@@ -8,52 +8,29 @@ export interface IncidentData {
 }
 
 // Function to create an overlay element
-export function createOverlayElement(incidentData: IncidentData) {
+export function createOverlayElement(incidents: IncidentData[], incidentType: string) {
   const overlay = document.createElement('div')
   overlay.classList.add('incident-overlay')
-  overlay.style.position = 'absolute'
-  overlay.style.top = '0'
-  overlay.style.left = '0'
-  overlay.style.backgroundColor = 'rgba(255, 0, 0, 0.8)'
-  overlay.style.color = 'white'
-  overlay.style.padding = '10px'
-  overlay.style.borderRadius = '5px'
-  overlay.style.zIndex = '9999'
-  overlay.style.fontSize = '14px'
-  overlay.style.fontWeight = 'bold'
   overlay.innerHTML = `
-      <p>Last Incident: ${incidentData.date}</p>
+      <div class="incident-card">
+        <div class="incident-header">
+          <h2>Last ${incidentType} Incident${incidents.length > 1 ? 's' : ''}</h2>
+        </div>
+        <div class="incident-body">
+          ${incidents
+            .map(
+              (incident) => `
+            <p><strong>Date:</strong> ${incident.date}</p>
+            <p><strong>Operator:</strong> ${incident.operator}</p>
+            <p><strong>Aircraft:</strong> ${incident.type}</p>
+            <p><strong>Location:</strong> ${incident.location}</p>
+            <p><strong>Fatalities:</strong> ${incident.fatalities}</p>
+            <hr>
+          `,
+            )
+            .join('')}
+        </div>
+      </div>
     `
   return overlay
-}
-
-// Function to extract an element using XPath
-export function extractElementUsingXPath(contextNode, xpath) {
-  const result = document.evaluate(
-    xpath,
-    contextNode,
-    null,
-    XPathResult.FIRST_ORDERED_NODE_TYPE,
-    null,
-  )
-  return result.singleNodeValue
-}
-
-// Function to extract detail using XPath
-export function extractDetailUsingXPath(element, xpath) {
-  const detail = element.evaluate(xpath, element, null, XPathResult.STRING_TYPE, null)
-  return detail.stringValue.trim()
-}
-
-// Function to find the flight options container based on the heading text
-export function findFlightOptionsContainer(headingText) {
-  const headings = document.querySelectorAll('h3')
-  console.log('Headings:', headings)
-  for (const heading of headings) {
-    console.log('Heading:', heading.textContent)
-    if (heading.textContent.includes(headingText)) {
-      return heading.nextElementSibling
-    }
-  }
-  return null
 }
