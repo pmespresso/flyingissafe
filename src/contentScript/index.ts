@@ -2,7 +2,7 @@ import { createOverlayElement } from './helpers/dom'
 import { IncidentData } from '../types'
 
 // Function to process flight details when aria-expanded is true
-function processFlightDetails(flightElement) {
+function processFlightDetails(flightElement: Element) {
   const flightLegs = flightElement.querySelectorAll('.c257Jb.eWArhb')
 
   const airlines: string[] = []
@@ -17,11 +17,11 @@ function processFlightDetails(flightElement) {
     incidentContainer = document.createElement('div')
     incidentContainer.classList.add('incident-container')
     incidentContainerParent.appendChild(incidentContainer)
-  } else {
+  } else if (incidentContainer) {
     incidentContainer.innerHTML = ''
   }
 
-  flightLegs.forEach((flightLeg) => {
+  flightLegs.forEach((flightLeg: any) => {
     const flightInfoElement = flightLeg.querySelector('.MX5RWe.sSHqwe.y52p7d')
 
     if (flightInfoElement) {
@@ -59,7 +59,7 @@ function processFlightDetails(flightElement) {
           airlineIncidentsData.length,
           incidentData,
         )
-        incidentContainer.appendChild(overlay)
+        incidentContainer?.appendChild(overlay)
       }
     })
 
@@ -80,7 +80,7 @@ function processFlightDetails(flightElement) {
           aircraftIncidentsData.length,
           incidentData,
         )
-        incidentContainer.appendChild(overlay)
+        incidentContainer?.appendChild(overlay)
       }
     })
   })
@@ -93,7 +93,7 @@ function attachAriaExpandListeners() {
     button.addEventListener('click', () => {
       setTimeout(() => {
         const flightElement = button.closest('li')
-        const incidentContainer = flightElement.querySelector('.incident-container')
+        const incidentContainer = flightElement?.querySelector('.incident-container')
 
         if (button.getAttribute('aria-expanded') === 'true') {
           if (flightElement) {
@@ -130,6 +130,7 @@ function afterWindowLoaded() {
       if (mutation.type === 'childList') {
         const addedNodes = mutation.addedNodes
         for (const node of addedNodes) {
+          // @ts-ignore
           if (node.nodeType === Node.ELEMENT_NODE && node.tagName === 'H3') {
             processFlights()
             break

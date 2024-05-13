@@ -12,12 +12,12 @@ export function createOverlayElement(
 
   const currentYear = new Date().getFullYear()
 
-  const validIncidentYears = incidentData
+  const validIncidentYears: number[] = incidentData
     .map((incident) => {
       const incidentDate = new Date(incident.date)
       return isNaN(incidentDate.getTime()) ? null : incidentDate.getFullYear()
     })
-    .filter((year) => year !== null)
+    .filter((year) => year !== null) as number[]
 
   const earliestIncidentYear =
     validIncidentYears.length > 0 ? Math.min(...validIncidentYears) : currentYear
@@ -128,7 +128,7 @@ export function createOverlayElement(
   `
 
   const closeButton = overlay.querySelector('.close-button')
-  closeButton.addEventListener('click', () => {
+  closeButton?.addEventListener('click', () => {
     overlay.remove()
   })
 
@@ -141,6 +141,7 @@ export function createOverlayElement(
       tabs.forEach((t) => t.classList.remove('active'))
       tabContents.forEach((content) => content.classList.remove('active'))
       tab.classList.add('active')
+      // @ts-ignore
       overlay.querySelector(`#${tabId}`).classList.add('active')
     })
   })
