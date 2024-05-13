@@ -155,6 +155,7 @@ style.textContent = `
     top: 0;
     right: 0;
     z-index: 9999;
+
     display: flex;
     flex-direction: column;
     gap: 10px;
@@ -173,8 +174,8 @@ style.textContent = `
   }
   
   .incident-card-container {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    display: flex;
+    flex-direction: column;
     gap: 20px;
   }
   
@@ -185,11 +186,21 @@ style.textContent = `
   }
   
   .incident-info {
-    grid-column: 1 / -1;
     background-color: #f0f0f0;
   }
   
-  .incident-card h2 {
+  .info-row {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 10px;
+  }
+  
+  .info-item {
+    flex: 1;
+  }
+  
+  .incident-card h2,
+  .incident-card h3 {
     font-size: 18px;
     font-weight: bold;
     margin-bottom: 10px;
@@ -220,8 +231,36 @@ style.textContent = `
     right: 10px;
     font-size: 24px;
     background: none;
+    color: #333;
     border: none;
     cursor: pointer;
+  }
+  
+  .tab-container {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 20px;
+  }
+  
+  .tab {
+    padding: 10px 20px;
+    background-color: #f0f0f0;
+    border-radius: 8px;
+    cursor: pointer;
+  }
+  
+  .tab.active {
+    background-color: #ddd;
+  }
+  
+  .tab-content {
+    display: none;
+  }
+  
+  .tab-content.active {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
   }
 `
 document.head.appendChild(style)
