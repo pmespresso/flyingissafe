@@ -27,7 +27,7 @@ export default defineManifest({
   },
   content_scripts: [
     {
-      matches: ['https://www.google.com/travel/*'],
+      matches: ['https://www.google.com/travel/flights/*'],
       js: ['src/contentScript/index.ts'],
     },
   ],

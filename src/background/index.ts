@@ -1,7 +1,7 @@
+console.log('background script running')
 // background.js
 import Papa from 'papaparse'
 
-console.log('Hello from background.js')
 // Function to fetch and parse the CSV data
 function fetchAndParseCSV() {
   // Replace 'path/to/your/csv/file.csv' with the actual path or URL to your CSV file

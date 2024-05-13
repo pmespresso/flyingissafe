@@ -1,4 +1,5 @@
-import { IncidentData, createOverlayElement } from './helpers/dom'
+import { createOverlayElement } from './helpers/dom'
+import { IncidentData } from '../types'
 
 // Function to process flight details when aria-expanded is true
 function processFlightDetails(flightElement) {
@@ -6,8 +7,20 @@ function processFlightDetails(flightElement) {
 
   const airlines: string[] = []
   const aircrafts: string[] = []
-  const airlineIncidents: { [key: string]: IncidentData } = {}
-  const aircraftIncidents: { [key: string]: IncidentData } = {}
+  const airlineIncidents: { [key: string]: IncidentData[] } = {}
+  const aircraftIncidents: { [key: string]: IncidentData[] } = {}
+
+  const incidentContainerParent = document.querySelector('div.PSZ8D.EA71Tc')
+  let incidentContainer = flightElement.querySelector('.incident-container')
+
+  if (!incidentContainer && incidentContainerParent) {
+    incidentContainer = document.createElement('div')
+    incidentContainer.classList.add('incident-container')
+    incidentContainerParent.appendChild(incidentContainer)
+  } else {
+    incidentContainer.innerHTML = ''
+  }
+
   flightLegs.forEach((flightLeg) => {
     const flightInfoElement = flightLeg.querySelector('.MX5RWe.sSHqwe.y52p7d')
 
@@ -23,56 +36,53 @@ function processFlightDetails(flightElement) {
       if (aircraftModel && !aircrafts.includes(aircraftModel)) {
         aircrafts.push(aircraftModel)
       }
-
-      const incidentContainerParent = document.querySelector('div.PSZ8D.EA71Tc')
-
-      console.log('incidentContainerParent', incidentContainerParent)
-
-      // Check if the incident container already exists
-      let incidentContainer = flightInfoElement.querySelector('.incident-container')
-      if (!incidentContainer && incidentContainerParent) {
-        incidentContainer = document.createElement('div')
-        incidentContainer.classList.add('incident-container')
-        incidentContainerParent.appendChild(incidentContainer)
-      } else {
-        // Clear the existing incident container
-        incidentContainer.innerHTML = ''
-      }
-
-      // Retrieve incident data from Chrome storage
-      chrome.storage.local.get('incidentData', function (data) {
-        const incidentData: IncidentData[] = data.incidentData
-
-        airlines.forEach((airline) => {
-          const lastIncident = incidentData
-            .filter(
-              (item) =>
-                item.operator && item.operator.toLowerCase().includes(airline.toLowerCase()),
-            )
-            .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())[0]
-
-          if (lastIncident) {
-            airlineIncidents[airline] = lastIncident
-
-            const overlay = createOverlayElement([lastIncident], 'Airline')
-            incidentContainer.appendChild(overlay)
-          }
-        })
-
-        aircrafts.forEach((aircraft) => {
-          const lastIncident = incidentData
-            .filter((item) => item.type && item.type.toLowerCase().includes(aircraft.toLowerCase()))
-            .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())[0]
-
-          if (lastIncident) {
-            aircraftIncidents[aircraft] = lastIncident
-
-            const overlay = createOverlayElement([lastIncident], 'Aircraft')
-            incidentContainer.appendChild(overlay)
-          }
-        })
-      })
     }
+  })
+
+  chrome.storage.local.get('incidentData', function (data) {
+    const incidentData: IncidentData[] = data.incidentData
+
+    airlines.forEach((airline) => {
+      const airlineIncidentsData = incidentData.filter(
+        (item) => item.operator && item.operator.toLowerCase().includes(airline.toLowerCase()),
+      )
+      airlineIncidents[airline] = airlineIncidentsData
+
+      const lastIncident = airlineIncidentsData.sort(
+        (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime(),
+      )[0]
+
+      if (lastIncident) {
+        const overlay = createOverlayElement(
+          lastIncident,
+          'Airline',
+          airlineIncidentsData.length,
+          incidentData,
+        )
+        incidentContainer.appendChild(overlay)
+      }
+    })
+
+    aircrafts.forEach((aircraft) => {
+      const aircraftIncidentsData = incidentData.filter(
+        (item) => item.type && item.type.toLowerCase().includes(aircraft.toLowerCase()),
+      )
+      aircraftIncidents[aircraft] = aircraftIncidentsData
+
+      const lastIncident = aircraftIncidentsData.sort(
+        (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime(),
+      )[0]
+
+      if (lastIncident) {
+        const overlay = createOverlayElement(
+          lastIncident,
+          'Aircraft',
+          aircraftIncidentsData.length,
+          incidentData,
+        )
+        incidentContainer.appendChild(overlay)
+      }
+    })
   })
 }
 
@@ -81,12 +91,17 @@ function attachAriaExpandListeners() {
   const ariaExpandButtons = document.querySelectorAll('button[aria-expanded]')
   ariaExpandButtons.forEach((button) => {
     button.addEventListener('click', () => {
-      // Wait for the aria-expanded attribute to be updated
       setTimeout(() => {
+        const flightElement = button.closest('li')
+        const incidentContainer = flightElement.querySelector('.incident-container')
+
         if (button.getAttribute('aria-expanded') === 'true') {
-          const flightElement = button.closest('li')
           if (flightElement) {
             processFlightDetails(flightElement)
+          }
+        } else {
+          if (incidentContainer) {
+            incidentContainer.remove()
           }
         }
       }, 0)
@@ -136,7 +151,7 @@ function afterWindowLoaded() {
 const style = document.createElement('style')
 style.textContent = `
   .incident-container {
-    position: absolute;
+    position: fixed;
     top: 0;
     right: 0;
     z-index: 9999;
@@ -145,31 +160,68 @@ style.textContent = `
     gap: 10px;
   }
 
-  .incident-card {
+  .incident-overlay {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    z-index: 9999;
+    max-width: 400px;
+    padding: 20px;
     background-color: #fff;
-    border-radius: 5px;
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-    padding: 10px;
-    font-size: 14px;
-    width: 300px;
+    border-radius: 8px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
   }
-
-  .incident-header {
-    background-color: #f44336;
-    color: #fff;
-    padding: 10px;
-    border-top-left-radius: 5px;
-    border-top-right-radius: 5px;
+  
+  .incident-card-container {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: 20px;
   }
-
-  .incident-body {
-    padding: 10px;
+  
+  .incident-card {
+    padding: 20px;
+    border-radius: 8px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
   }
-
-  .no-incident-data {
-    color: #888;
-    font-size: 12px;
-    margin-top: 5px;
+  
+  .incident-info {
+    grid-column: 1 / -1;
+    background-color: #f0f0f0;
+  }
+  
+  .incident-card h2 {
+    font-size: 18px;
+    font-weight: bold;
+    margin-bottom: 10px;
+  }
+  
+  .incident-card p {
+    margin-bottom: 5px;
+  }
+  
+  .emoji {
+    font-size: 24px;
+    margin-right: 5px;
+  }
+  
+  .high-risk {
+    background-color: #ffe7e7;
+    color: #d32f2f;
+  }
+  
+  .low-risk {
+    background-color: #e7f5e7;
+    color: #388e3c;
+  }
+  
+  .close-button {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    font-size: 24px;
+    background: none;
+    border: none;
+    cursor: pointer;
   }
 `
 document.head.appendChild(style)
