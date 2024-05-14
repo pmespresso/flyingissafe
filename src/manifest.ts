@@ -44,7 +44,7 @@ export default defineManifest({
     },
   ],
   // permissions: ['sidePanel', 'storage', 'tabs'],
-  permissions: ['tabs'],
+  permissions: ['storage', 'tabs'],
   // chrome_url_overrides: {
   //   newtab: 'newtab.html',
   // },

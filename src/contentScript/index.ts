@@ -44,7 +44,7 @@ function processFlightDetails(flightElement: Element) {
 
     airlines.forEach((airline) => {
       const airlineIncidentsData = incidentData.filter(
-        (item) => item.operator && item.operator.toLowerCase().includes(airline.toLowerCase()),
+        (item) => item.operator && item.operator.toLowerCase() === airline.toLowerCase(),
       )
       airlineIncidents[airline] = airlineIncidentsData
 
@@ -57,7 +57,7 @@ function processFlightDetails(flightElement: Element) {
           lastIncident,
           'Airline',
           airlineIncidentsData.length,
-          incidentData,
+          airlineIncidentsData,
         )
         incidentContainer?.appendChild(overlay)
       }
@@ -151,23 +151,13 @@ function afterWindowLoaded() {
 // Inject CSS styles into the page
 const style = document.createElement('style')
 style.textContent = `
-  .incident-container {
-    position: fixed;
-    top: 0;
-    right: 0;
-    z-index: 9999;
-
-    display: flex;
-    flex-direction: column;
-    gap: 10px;
-  }
-
   .incident-overlay {
-    position: absolute;
+    position: fixed;
     top: 10px;
     right: 10px;
     z-index: 9999;
-    max-width: 400px;
+    max-width: 500px;
+    width: 100%;
     padding: 20px;
     background-color: #fff;
     border-radius: 8px;
@@ -220,6 +210,15 @@ style.textContent = `
     background-color: #ffe7e7;
     color: #d32f2f;
   }
+
+  .total-incidents {
+    background-color: #f0f0f0;
+  }
+  
+  .medium-risk {
+    background-color: #fff3e0;
+    color: #ff9800;
+  }  
   
   .low-risk {
     background-color: #e7f5e7;
@@ -248,6 +247,11 @@ style.textContent = `
     background-color: #f0f0f0;
     border-radius: 8px;
     cursor: pointer;
+    transition: background-color 0.3s ease;
+  }
+  
+  .tab:hover {
+    background-color: #e0e0e0;
   }
   
   .tab.active {
@@ -262,6 +266,15 @@ style.textContent = `
     display: flex;
     flex-direction: column;
     gap: 20px;
+  }
+  
+  @media screen and (max-width: 600px) {
+    .incident-overlay {
+      max-width: 90%;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+    }
   }
 `
 document.head.appendChild(style)
