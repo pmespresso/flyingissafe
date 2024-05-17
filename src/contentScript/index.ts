@@ -1,9 +1,9 @@
 // contentScript/index.ts
-import { createOverlayElement } from './helpers/dom'
-import { IncidentData } from '../types'
+import { ServerIncidentData, UIIncidentData } from '../types'
+import { createLoadingElement, createOverlayElement } from './helpers/dom'
 
 // Function to process flight details when aria-expanded is true
-async function processFlightDetails(flightElement: Element) {
+async function processFlightDetails(flightElement: any) {
   const flightLegs = flightElement.querySelectorAll('.c257Jb.eWArhb')
 
   const airlines: string[] = []
@@ -11,9 +11,6 @@ async function processFlightDetails(flightElement: Element) {
 
   const incidentContainerParent = document.querySelector('div.PSZ8D.EA71Tc')
   let incidentContainer = flightElement.querySelector('.incident-container')
-
-  const overlay = createOverlayElement(null, 'Airline', true)
-  incidentContainer?.appendChild(overlay)
 
   if (!incidentContainer && incidentContainerParent) {
     incidentContainer = document.createElement('div')
@@ -23,13 +20,14 @@ async function processFlightDetails(flightElement: Element) {
     incidentContainer.innerHTML = ''
   }
 
-  flightLegs.forEach((flightLeg: any) => {
+  const overlayLoading = createLoadingElement()
+  incidentContainer?.appendChild(overlayLoading)
+
+  flightLegs.forEach((flightLeg: Element) => {
     const flightInfoElement = flightLeg.querySelector('.MX5RWe.sSHqwe.y52p7d')
 
     if (flightInfoElement) {
       const flightAirlineElements = flightInfoElement.querySelectorAll('.Xsgmwe')
-
-      console.log('flightAirlineElements', flightAirlineElements)
 
       const airlineName = flightAirlineElements ? flightAirlineElements[0].textContent : ''
       const aircraftModel = flightAirlineElements ? flightAirlineElements[3].textContent : ''
@@ -44,46 +42,66 @@ async function processFlightDetails(flightElement: Element) {
     }
   })
 
-  console.log('airlines', airlines)
-  console.log('aircrafts', aircrafts)
+  const incidents: UIIncidentData[] = []
 
-  // Fetch the latest fatal incidents by airline and aircraft
   await Promise.all([
-    new Promise((resolve) => {
-      chrome.runtime.sendMessage(
-        { action: 'fetchLatestFatalIncidentByAirline', airline: airlines[0] },
-        (response) => {
-          resolve(response.incident)
-        },
-      )
-    }),
-    new Promise((resolve) => {
-      chrome.runtime.sendMessage(
-        { action: 'fetchLatestFatalIncidentByAircraft', aircraft: aircrafts[0] },
-        (response) => {
-          resolve(response.incident)
-        },
-      )
-    }),
+    ...airlines.map(
+      (airline) =>
+        new Promise<void>((resolve) => {
+          chrome.runtime.sendMessage(
+            { action: 'fetchLatestFatalIncidentByAirline', airline },
+            (response) => {
+              incidents.push({
+                type: 'Airline',
+                airline,
+                date: response.incident.date,
+                fatalities: response.incident.fatalities,
+                location: response.incident.location,
+                daysSinceLastIncident: Math.floor(
+                  (new Date().getTime() - new Date(response.incident.date).getTime()) /
+                    (1000 * 3600 * 24),
+                ),
+              })
+              overlayLoading.remove()
+
+              resolve()
+            },
+          )
+        }),
+    ),
+    ...aircrafts.map(
+      (aircraft) =>
+        new Promise<void>((resolve) => {
+          chrome.runtime.sendMessage(
+            { action: 'fetchLatestFatalIncidentByAircraft', aircraft },
+            (response) => {
+              incidents.push({
+                type: 'Aircraft',
+                aircraft,
+                date: response.incident.date,
+                fatalities: response.incident.fatalities,
+                location: response.incident.location,
+                daysSinceLastIncident: Math.floor(
+                  (new Date().getTime() - new Date(response.incident.date).getTime()) /
+                    (1000 * 3600 * 24),
+                ),
+              })
+              overlayLoading.remove()
+
+              resolve()
+            },
+          )
+        }),
+    ),
   ])
-    .then(([lastAirlineIncident, lastAircraftIncident]: any) => {
-      console.log('lastAirlineIncident', lastAirlineIncident)
-      console.log('lastAircraftIncident', lastAircraftIncident)
-
-      overlay.remove()
-
-      if (lastAirlineIncident) {
-        const airlineOverlay = createOverlayElement(lastAirlineIncident, 'Airline', false)
-        incidentContainer?.appendChild(airlineOverlay)
-      }
-
-      if (lastAircraftIncident) {
-        const aircraftOverlay = createOverlayElement(lastAircraftIncident, 'Aircraft', false)
-        incidentContainer?.appendChild(aircraftOverlay)
-      }
+    .then(() => {
+      overlayLoading.remove()
+      const overlay = createOverlayElement(incidents)
+      incidentContainer?.appendChild(overlay)
     })
     .catch((error) => {
       console.error('Error fetching incident data:', error)
+      overlayLoading.remove()
     })
 }
 
@@ -152,6 +170,29 @@ function afterWindowLoaded() {
 // Inject CSS styles into the page
 const style = document.createElement('style')
 style.textContent = `
+/* Base styles */
+body {
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+}
+
+.incident-overlay {
+  position: fixed;
+  bottom: 10px;
+  right: 10px;
+  z-index: 9999;
+  max-width: 400px;
+  width: 100%;
+  padding: 20px;
+  background-color: #ffffff;
+  border-radius: 10px;
+  border: none;
+  overflow-y: auto;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+  font-family: Arial, sans-serif;
+  color: #333;
+  transition: all 0.3s ease;
+}
+
 .loading-indicator {
   display: flex;
   justify-content: center;
@@ -161,130 +202,138 @@ style.textContent = `
   font-weight: bold;
 }
 
-  .incident-overlay {
-    position: fixed;
-    top: 10px;
-    right: 10px;
-    z-index: 9999;
-    max-width: 300px;
-    width: 100%;
-    padding: 20px;
-    background-color: #fff;
-    border-radius: 8px;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-  }
-  
-  .incident-card-container {
-    display: flex;
-    flex-direction: column;
-    gap: 20px;
-  }
-  
-  .incident-card {
-    padding: 20px;
-    border-radius: 8px;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-  }
-  
-  .incident-info {
-    background-color: #f0f0f0;
-  }
-  
-  .info-row {
-    display: flex;
-    justify-content: space-between;
-    margin-bottom: 10px;
-  }
-  
-  .info-item {
-    flex: 1;
-  }
-  
-  .incident-card h2,
-  .incident-card h3 {
-    font-size: 18px;
-    font-weight: bold;
-    margin-bottom: 10px;
-  }
-  
-  .incident-card p {
-    margin-bottom: 5px;
-  }
-  
-  .emoji {
-    font-size: 24px;
-    margin-right: 5px;
-  }
-  
-  .high-risk {
-    background-color: #ffe7e7;
-    color: #d32f2f;
-  }
+.spinner {
+  border: 4px solid rgba(0, 0, 0, 0.1);
+  border-left-color: #219EBC;
+  border-radius: 50%;
+  width: 24px;
+  height: 24px;
+  animation: spin 1s linear infinite;
+  margin-right: 10px;
+}
 
-  .total-incidents {
-    background-color: #f0f0f0;
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
   }
-  
-  .medium-risk {
-    background-color: #fff3e0;
-    color: #ff9800;
-  }  
-  
-  .low-risk {
-    background-color: #e7f5e7;
-    color: #388e3c;
+}
+
+.incident-card-container {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.tabs {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 20px;
+}
+
+.tab {
+  padding: 10px 20px;
+  background-color: #8ECAE6;
+  border: 1px solid #219EBC;
+  border-radius: 10px;
+  cursor: pointer;
+  transition: background-color 0.3s ease, border-color 0.3s ease, color 0.3s ease;
+  color: #fff;
+}
+
+.tab:hover {
+  background-color: #219EBC;
+}
+
+.tab.active {
+  background-color: #023047;
+  border-color: #023047;
+  color: #fff;
+}
+
+.tab-content {
+  display: none;
+}
+
+.tab-content.active {
+  display: block;
+}
+
+.incident-card {
+  padding: 15px;
+  border-radius: 10px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  background-color: #f9f9f9;
+}
+
+.incident-info {
+  background-color: #f0f0f0;
+  border: 1px solid #d0d0d0;
+  border-radius: 10px;
+  padding: 10px;
+}
+
+.info-row {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  margin-bottom: 10px;
+}
+
+.info-item {
+  flex: 1;
+  margin: 0 0 5px 5px;
+}
+
+.incident-card h2,
+.incident-card h3 {
+  font-size: 16px;
+  font-weight: bold;
+  margin-bottom: 10px;
+}
+
+.incident-card p {
+  margin-bottom: 5px;
+}
+
+.high-risk {
+  background-color: #ffebee;
+  color: #d32f2f;
+}
+
+.medium-risk {
+  background-color: #fff8e1;
+  color: #ff9800;
+}
+
+.low-risk {
+  background-color: #e8f5e9;
+  color: #388e3c;
+}
+
+.close-button {
+  position: absolute;
+  top: 5px;
+  right: 5px;
+  font-size: 20px;
+  background: none;
+  color: #333;
+  border: none;
+  cursor: pointer;
+  transition: color 0.3s ease;
+}
+
+.close-button:hover {
+  color: #d32f2f;
+}
+
+@media screen and (max-width: 600px) {
+  .incident-overlay {
+    max-width: 90%;
+    bottom: 50%;
+    left: 50%;
+    transform: translate(-50%, 50%);
   }
-  
-  .close-button {
-    position: absolute;
-    top: 10px;
-    right: 10px;
-    font-size: 24px;
-    background: none;
-    color: #333;
-    border: none;
-    cursor: pointer;
-  }
-  
-  .tab-container {
-    display: flex;
-    gap: 10px;
-    margin-bottom: 20px;
-  }
-  
-  .tab {
-    padding: 10px 20px;
-    background-color: #f0f0f0;
-    border-radius: 8px;
-    cursor: pointer;
-    transition: background-color 0.3s ease;
-  }
-  
-  .tab:hover {
-    background-color: #e0e0e0;
-  }
-  
-  .tab.active {
-    background-color: #ddd;
-  }
-  
-  .tab-content {
-    display: none;
-  }
-  
-  .tab-content.active {
-    display: flex;
-    flex-direction: column;
-    gap: 20px;
-  }
-  
-  @media screen and (max-width: 600px) {
-    .incident-overlay {
-      max-width: 90%;
-      top: 50%;
-      left: 50%;
-      transform: translate(-50%, -50%);
-    }
-  }
+}
+
 `
 document.head.appendChild(style)

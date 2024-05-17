@@ -1,95 +1,102 @@
-import { IncidentData } from '../../types'
+import { UIIncidentData } from '../../types'
 
-export function createOverlayElement(
-  lastIncident: IncidentData | null,
-  lineOrCraft: 'Airline' | 'Aircraft',
-  loading: boolean = false,
-) {
+export function createLoadingElement() {
   const overlay = document.createElement('div')
   overlay.classList.add('incident-overlay')
 
-  let incidentInfo = ''
-  let timeSinceLastIncident = ''
-  let timeSinceLastFatalIncident = ''
-
-  if (lastIncident) {
-    const lastIncidentDate = new Date(lastIncident.date)
-    const timeSinceLastIncidentDays = Math.floor(
-      (new Date().getTime() - lastIncidentDate.getTime()) / (1000 * 3600 * 24),
-    )
-
-    incidentInfo = `
+  overlay.innerHTML = `
+    <div class="incident-card-container">
       <div class="incident-card incident-info">
-        <p class="incident-reason">The following incident is being shown because your selected flight involves the same ${lineOrCraft.toLowerCase()} (${
-          lastIncident[lineOrCraft.toLowerCase() === 'airline' ? 'operator' : 'type']
-        }) as the incident.</p>
-        <div class="info-row">
-          <div class="info-item">
-            <strong>Last Incident:</strong>
-            <p>${lastIncident.date}</p>
-          </div>
-          <div class="info-item">
-            <strong>Fatalities:</strong>
-            <p>${lastIncident.fat}</p>
-          </div>
+        <div class="loading-indicator">
+          <div class="spinner"></div>
+          Loading...
         </div>
       </div>
-    `
+    </div>
+  `
+  return overlay
+}
 
-    timeSinceLastIncident = `
-      <div class="incident-card time-since-incident ${
-        timeSinceLastIncidentDays > 365 ? 'low-risk' : 'medium-risk'
-      }">
-        <h3><span class="emoji">⏳</span> Time Since Last ${
-          lastIncident[lineOrCraft.toLowerCase() === 'airline' ? 'operator' : 'type']
-        } Incident</h3>
-        <p>${timeSinceLastIncidentDays} days</p>
+export function createOverlayElement(incidents: UIIncidentData[]) {
+  const overlay = document.createElement('div')
+  overlay.classList.add('incident-overlay')
+
+  const tabs = incidents
+    .map(
+      (incident, index) => `
+    <button class="tab ${index === 0 ? 'active' : ''}" data-index="${index}">
+      ${incident.type === 'Aircraft' ? incident.aircraft : incident.airline}
+    </button>
+  `,
+    )
+    .join('')
+
+  const content = incidents
+    .map(
+      (incident, index) => `
+    <div class="tab-content ${index === 0 ? 'active' : ''}" data-index="${index}">
+      <div class="incident-card incident-info">
+        <p>The following incident is being shown because your selected flight involves the same ${incident.type.toLowerCase()} (${incident.type === 'Aircraft' ? incident.aircraft : incident.airline}) as the incident.</p>
+        <div class="info-row">
+          <div class="info-item"><strong>Last Incident:</strong><p>${incident.date}</p></div>
+          <div class="info-item"><strong>Fatalities:</strong><p>${incident.fatalities}</p></div>
+          <div class="info-item"><strong>Location:</strong><p>${incident.location}</p></div>
+          <div class="info-item"><strong>Airline:</strong><p>${incident.airline}</p></div>
+        </div>
       </div>
-    `
-
-    if (lastIncident.fat > 0) {
-      timeSinceLastFatalIncident = `
-        <div class="incident-card time-since-fatal ${
-          timeSinceLastIncidentDays > 365 ? 'low-risk' : 'high-risk'
-        }">
-          <h3><span class="emoji">💀</span> Time Since Last Fatal ${
-            lastIncident[lineOrCraft.toLowerCase() === 'airline' ? 'operator' : 'type']
-          } Incident</h3>
-          <p>${timeSinceLastIncidentDays} days</p>
+      
+      <div class="incident-card time-since-incident ${incident.daysSinceLastIncident > 365 ? 'low-risk' : 'medium-risk'}">
+        <h3>Time Since Last ${incident.type === 'Aircraft' ? incident.aircraft : incident.airline} Incident</h3>
+        <p>${incident.daysSinceLastIncident} days</p>
+      </div>
+      ${
+        incident.fatalities > 0
+          ? `
+        <div class="incident-card time-since-fatal ${incident.daysSinceLastIncident > 365 ? 'low-risk' : 'high-risk'}">
+          <h3>Time Since Last Fatal ${incident.type === 'Aircraft' ? incident.aircraft : incident.airline} Incident</h3>
+          <p>${incident.daysSinceLastIncident} days</p>
         </div>
       `
-    }
-  } else {
-    incidentInfo = `
-      <div class="incident-card incident-info">
-        <p>No recent incidents found for the selected ${lineOrCraft.toLowerCase()}.</p>
-      </div>
-    `
-  }
+          : `
+        <div class="incident-card time-since-fatal low-risk">
+          <h3>No Fatal ${incident.type === 'Aircraft' ? incident.aircraft : incident.airline} Incidents Found</h3>
+          <p>This is a good sign!</p>
+        </div>
+      `
+      }
+    </div>
+  `,
+    )
+    .join('')
 
   overlay.innerHTML = `
     <div class="incident-card-container">
-      <button class="close-button">X</button>
-      <div class="incident-card incident-info">
-        <h2><span class="emoji">✈️</span> Incident Information</h2>
-        <div class="info-row">
-          <div class="info-item">
-            <strong>${lineOrCraft}:</strong>
-            <p>${lastIncident ? lastIncident[lineOrCraft.toLowerCase() === 'airline' ? 'operator' : 'type'] : 'N/A'}</p>
-          </div>
-        </div>
+      <button class="close-button">✖</button>
+      <div class="tabs">
+        ${tabs}
       </div>
-      ${loading ? '<div class="loading-indicator">Loading...</div>' : ''}
-      ${!loading && incidentInfo}
-      ${!loading && timeSinceLastIncident}
-      ${!loading && timeSinceLastFatalIncident}
+      ${content}
       <small>Source: <a href="https://aviation-safety.net">https://aviation-safety.net</a></small>
-      <small>If you notice an error, please report the issue <a href="mailto:yj@lasalida.io">here</a></small>    </div>
+      <small>If you notice an error, please report the issue <a href="mailto:yj@lasalida.io">here</a></small>
+    </div>
   `
 
   const closeButton = overlay.querySelector('.close-button')
   closeButton?.addEventListener('click', () => {
     overlay.remove()
+  })
+
+  const tabButtons = overlay.querySelectorAll('.tab')
+  const tabContents = overlay.querySelectorAll('.tab-content')
+  tabButtons.forEach((button) => {
+    button.addEventListener('click', () => {
+      const index = button.getAttribute('data-index')
+      tabButtons.forEach((btn) => btn.classList.remove('active'))
+      tabContents.forEach((content) => content.classList.remove('active'))
+      button.classList.add('active')
+      // @ts-ignore
+      overlay.querySelector(`.tab-content[data-index="${index}"]`).classList.add('active')
+    })
   })
 
   return overlay

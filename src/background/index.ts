@@ -1,6 +1,6 @@
 //@ts-ignore
-// const isDev = process.env.NODE_ENV == 'development'
-const isDev = false
+const isDev = process.env.NODE_ENV == 'development'
+// const isDev = false
 const apiBase = isDev ? 'http://localhost:8000' : 'https://flight-server-dklp.onrender.com'
 
 // background.ts
