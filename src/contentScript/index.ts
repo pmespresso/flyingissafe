@@ -1,14 +1,13 @@
+// contentScript/index.ts
 import { createOverlayElement } from './helpers/dom'
 import { IncidentData } from '../types'
 
 // Function to process flight details when aria-expanded is true
-function processFlightDetails(flightElement: Element) {
+async function processFlightDetails(flightElement: Element) {
   const flightLegs = flightElement.querySelectorAll('.c257Jb.eWArhb')
 
   const airlines: string[] = []
   const aircrafts: string[] = []
-  const airlineIncidents: { [key: string]: IncidentData[] } = {}
-  const aircraftIncidents: { [key: string]: IncidentData[] } = {}
 
   const incidentContainerParent = document.querySelector('div.PSZ8D.EA71Tc')
   let incidentContainer = flightElement.querySelector('.incident-container')
@@ -26,7 +25,10 @@ function processFlightDetails(flightElement: Element) {
 
     if (flightInfoElement) {
       const flightAirlineElements = flightInfoElement.querySelectorAll('.Xsgmwe')
-      const airlineName = flightAirlineElements ? flightAirlineElements[1].textContent : ''
+
+      console.log('flightAirlineElements', flightAirlineElements)
+
+      const airlineName = flightAirlineElements ? flightAirlineElements[0].textContent : ''
       const aircraftModel = flightAirlineElements ? flightAirlineElements[3].textContent : ''
 
       if (airlineName && !airlines.includes(airlineName)) {
@@ -39,51 +41,45 @@ function processFlightDetails(flightElement: Element) {
     }
   })
 
-  chrome.storage.local.get('incidentData', function (data) {
-    const incidentData: IncidentData[] = data.incidentData
+  console.log('airlines', airlines)
+  console.log('aircrafts', aircrafts)
 
-    airlines.forEach((airline) => {
-      const airlineIncidentsData = incidentData.filter(
-        (item) => item.operator && item.operator.toLowerCase() === airline.toLowerCase(),
+  // Fetch the latest fatal incidents by airline and aircraft
+  await Promise.all([
+    new Promise((resolve) => {
+      chrome.runtime.sendMessage(
+        { action: 'fetchLatestFatalIncidentByAirline', airline: airlines[0] },
+        (response) => {
+          resolve(response.incident)
+        },
       )
-      airlineIncidents[airline] = airlineIncidentsData
+    }),
+    new Promise((resolve) => {
+      chrome.runtime.sendMessage(
+        { action: 'fetchLatestFatalIncidentByAircraft', aircraft: aircrafts[0] },
+        (response) => {
+          resolve(response.incident)
+        },
+      )
+    }),
+  ])
+    .then(([lastAirlineIncident, lastAircraftIncident]: any) => {
+      console.log('lastAirlineIncident', lastAirlineIncident)
+      console.log('lastAircraftIncident', lastAircraftIncident)
 
-      const lastIncident = airlineIncidentsData.sort(
-        (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime(),
-      )[0]
+      if (lastAirlineIncident) {
+        const overlay = createOverlayElement(lastAirlineIncident, 'Airline')
+        incidentContainer?.appendChild(overlay)
+      }
 
-      if (lastIncident) {
-        const overlay = createOverlayElement(
-          lastIncident,
-          'Airline',
-          airlineIncidentsData.length,
-          airlineIncidentsData,
-        )
+      if (lastAircraftIncident) {
+        const overlay = createOverlayElement(lastAircraftIncident, 'Aircraft')
         incidentContainer?.appendChild(overlay)
       }
     })
-
-    aircrafts.forEach((aircraft) => {
-      const aircraftIncidentsData = incidentData.filter(
-        (item) => item.type && item.type.toLowerCase().includes(aircraft.toLowerCase()),
-      )
-      aircraftIncidents[aircraft] = aircraftIncidentsData
-
-      const lastIncident = aircraftIncidentsData.sort(
-        (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime(),
-      )[0]
-
-      if (lastIncident) {
-        const overlay = createOverlayElement(
-          lastIncident,
-          'Aircraft',
-          aircraftIncidentsData.length,
-          incidentData,
-        )
-        incidentContainer?.appendChild(overlay)
-      }
+    .catch((error) => {
+      console.error('Error fetching incident data:', error)
     })
-  })
 }
 
 // Function to attach click event listeners to aria-expand buttons
@@ -156,7 +152,7 @@ style.textContent = `
     top: 10px;
     right: 10px;
     z-index: 9999;
-    max-width: 500px;
+    max-width: 300px;
     width: 100%;
     padding: 20px;
     background-color: #fff;

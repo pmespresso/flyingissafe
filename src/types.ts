@@ -3,6 +3,6 @@ export interface IncidentData {
   type: string
   reg: string
   operator: string
-  fatalities: number
+  fat: number
   location: string
 }
