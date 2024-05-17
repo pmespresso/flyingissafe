@@ -12,6 +12,9 @@ async function processFlightDetails(flightElement: Element) {
   const incidentContainerParent = document.querySelector('div.PSZ8D.EA71Tc')
   let incidentContainer = flightElement.querySelector('.incident-container')
 
+  const overlay = createOverlayElement(null, 'Airline', true)
+  incidentContainer?.appendChild(overlay)
+
   if (!incidentContainer && incidentContainerParent) {
     incidentContainer = document.createElement('div')
     incidentContainer.classList.add('incident-container')
@@ -67,14 +70,16 @@ async function processFlightDetails(flightElement: Element) {
       console.log('lastAirlineIncident', lastAirlineIncident)
       console.log('lastAircraftIncident', lastAircraftIncident)
 
+      overlay.remove()
+
       if (lastAirlineIncident) {
-        const overlay = createOverlayElement(lastAirlineIncident, 'Airline')
-        incidentContainer?.appendChild(overlay)
+        const airlineOverlay = createOverlayElement(lastAirlineIncident, 'Airline', false)
+        incidentContainer?.appendChild(airlineOverlay)
       }
 
       if (lastAircraftIncident) {
-        const overlay = createOverlayElement(lastAircraftIncident, 'Aircraft')
-        incidentContainer?.appendChild(overlay)
+        const aircraftOverlay = createOverlayElement(lastAircraftIncident, 'Aircraft', false)
+        incidentContainer?.appendChild(aircraftOverlay)
       }
     })
     .catch((error) => {
@@ -147,6 +152,15 @@ function afterWindowLoaded() {
 // Inject CSS styles into the page
 const style = document.createElement('style')
 style.textContent = `
+.loading-indicator {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 20px;
+  font-size: 18px;
+  font-weight: bold;
+}
+
   .incident-overlay {
     position: fixed;
     top: 10px;

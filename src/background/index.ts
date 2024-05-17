@@ -1,3 +1,8 @@
+//@ts-ignore
+// const isDev = process.env.NODE_ENV == 'development'
+const isDev = false
+const apiBase = isDev ? 'http://localhost:8000' : 'https://flight-server-dklp.onrender.com'
+
 // background.ts
 chrome.runtime.onInstalled.addListener(() => {
   console.log('Background script running')
@@ -8,7 +13,7 @@ async function fetchIncidentData(endpoint: string) {
   console.log('fetchIncidentData', endpoint)
 
   try {
-    const response = await fetch(`http://localhost:8000${endpoint}`)
+    const response = await fetch(`${apiBase}${endpoint}`)
     const data = await response.json()
     return data
   } catch (error) {

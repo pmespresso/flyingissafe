@@ -3,6 +3,7 @@ import { IncidentData } from '../../types'
 export function createOverlayElement(
   lastIncident: IncidentData | null,
   lineOrCraft: 'Airline' | 'Aircraft',
+  loading: boolean = false,
 ) {
   const overlay = document.createElement('div')
   overlay.classList.add('incident-overlay')
@@ -78,12 +79,12 @@ export function createOverlayElement(
           </div>
         </div>
       </div>
-      ${incidentInfo}
-      ${timeSinceLastIncident}
-      ${timeSinceLastFatalIncident}
+      ${loading ? '<div class="loading-indicator">Loading...</div>' : ''}
+      ${!loading && incidentInfo}
+      ${!loading && timeSinceLastIncident}
+      ${!loading && timeSinceLastFatalIncident}
       <small>Source: <a href="https://aviation-safety.net">https://aviation-safety.net</a></small>
-      <small>If you notice an error, please report the issue <a href="mailto:yj@lasalida.io">here</a></small>
-    </div>
+      <small>If you notice an error, please report the issue <a href="mailto:yj@lasalida.io">here</a></small>    </div>
   `
 
   const closeButton = overlay.querySelector('.close-button')
