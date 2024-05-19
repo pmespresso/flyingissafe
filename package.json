@@ -1,8 +1,8 @@
 {
   "name": "flyingissafe",
   "displayName": "Flying Is Safe",
-  "version": "0.0.1",
-  "author": "no one",
+  "version": "0.0.3",
+  "author": "0xyjkim",
   "description": "",
   "type": "module",
   "license": "MIT",
@@ -25,7 +25,6 @@
     "zip": "npm run build && node src/zip.js"
   },
   "dependencies": {
-    "papaparse": "^5.4.1",
     "react": "^18.2.0",
     "react-dom": "^18.2.0"
   },
