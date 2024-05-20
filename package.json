@@ -1,6 +1,6 @@
 {
-  "name": "flyingissafe",
-  "displayName": "Flying Is Safe",
+  "name": "flight-incident-tracker",
+  "displayName": "Flight Incident Tracker",
   "version": "0.0.3",
   "author": "0xyjkim",
   "description": "",
@@ -12,7 +12,12 @@
     "vite",
     "create-chrome-ext",
     "flyingissafe",
-    "passport bros meaning"
+    "flight incident tracker",
+    "flight",
+    "incident",
+    "flying",
+    "airline safety",
+    "how safe is flying",
   ],
   "engines": {
     "node": ">=14.18.0"

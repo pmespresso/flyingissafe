@@ -1,4 +1,5 @@
-import { fetchMostRecentIncidentsByAircraft, fetchMostRecentIncidentsByAirline } from "./api";
+import { fetchMostRecentIncidentsByAircraft, fetchMostRecentIncidentsByAirline, isDev } from "./api";
+import { dummyAircraftIncidentData, dummyAirlineIncidentData } from "./dev";
 
 // This function will be executed in the context of the Google Flights page
 // A "Journey" refers to the entire set of flights that comprise a trip from point A to point Z through connecting flights
@@ -52,7 +53,8 @@ async function attachActionButtons(flightElement: Element) {
         const { airlinesInTheJourney, aircraftsInTheJourney } = readJourneyDetails(flightElement);
         const incidentData = await getIncidentData(airlinesInTheJourney, aircraftsInTheJourney);
 
-        console.log(incidentData);
+        // Send the message to Popup
+        chrome.runtime.sendMessage({ type: 'incidentData', data: incidentData });
     });
 
     buttonContainer.appendChild(actionButton);
@@ -92,11 +94,26 @@ async function attachActionButtons(flightElement: Element) {
 }
 
 async function getIncidentData(airlinesInTheJourney: string[], aircraftsInTheJourney: string[]) {
+    console.log("isDev", isDev)
+
+    if (isDev)  {
+        chrome.runtime.sendMessage({ type: 'incidentData', data: { airlineIncidents: dummyAirlineIncidentData, aircraftIncidents: dummyAircraftIncidentData} });
+
+        chrome.runtime.sendMessage({ type: 'openPopup' });
+
+        return { airlineIncidents: dummyAirlineIncidentData, aircraftIncidents: dummyAircraftIncidentData };
+    }
     const airlineIncidents = await Promise.all(airlinesInTheJourney.map(fetchMostRecentIncidentsByAirline));
     const aircraftIncidents = await Promise.all(aircraftsInTheJourney.map(fetchMostRecentIncidentsByAircraft));
 
     console.log("airlineIncidents", airlineIncidents);
     console.log("aircraftIncidents", aircraftIncidents);
+
+    // Send the incident data to the popup
+    chrome.runtime.sendMessage({ type: 'incidentData', data: { airlineIncidents, aircraftIncidents } });
+
+    chrome.runtime.sendMessage({ type: 'openPopup' });
+
 
     return { airlineIncidents, aircraftIncidents };
 }

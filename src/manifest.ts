@@ -2,7 +2,6 @@
 import { defineManifest } from '@crxjs/vite-plugin'
 import packageData from '../package.json'
 
-//@ts-ignore
 const isDev = process.env.NODE_ENV == 'development'
 
 export default defineManifest({
@@ -16,6 +15,7 @@ export default defineManifest({
     128: 'img/logo.png',
   },
   action: {
+    default_title: "Flight Incidents",
     default_popup: 'popup.html',
     default_icon: 'img/logo.png',
   },
@@ -35,7 +35,6 @@ export default defineManifest({
       matches: [],
     },
   ],
-  // permissions: ['sidePanel', 'storage', 'tabs'],
   permissions: ['storage'],
   // chrome_url_overrides: {
   //   newtab: 'newtab.html',
