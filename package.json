@@ -17,7 +17,7 @@
     "incident",
     "flying",
     "airline safety",
-    "how safe is flying",
+    "how safe is flying"
   ],
   "engines": {
     "node": ">=14.18.0"

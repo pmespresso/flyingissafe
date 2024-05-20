@@ -1,11 +1,8 @@
-import { fetchMostRecentIncidentsByAircraft, fetchMostRecentIncidentsByAirline, isDev } from "./api";
+import { AllData } from "../types";
+import { fetchMostRecentIncidentsByAircraft, fetchMostRecentIncidentsByAirline, getRiskLevel, isDev } from "./api";
 import { dummyAircraftIncidentData, dummyAirlineIncidentData } from "./dev";
 
-// This function will be executed in the context of the Google Flights page
-// A "Journey" refers to the entire set of flights that comprise a trip from point A to point Z through connecting flights
-// It will extract the airlines and aircrafts of each flight leg in the journey
 function readJourneyDetails(flightElement: Element) {
-    console.log('readJourneyDetails', flightElement);
     const flightLegs = flightElement.querySelectorAll('.c257Jb.eWArhb');
 
     const airlinesInTheJourney: string[] = [];
@@ -13,34 +10,26 @@ function readJourneyDetails(flightElement: Element) {
 
     flightLegs.forEach((flightLeg: Element) => {
         const flightInfoElement = flightLeg.querySelector('.MX5RWe.sSHqwe.y52p7d');
+        if (!flightInfoElement) return;
 
-        if (flightInfoElement) {
-            const flightAirlineElements = flightInfoElement.querySelectorAll('.Xsgmwe');
+        const flightAirlineElements = flightInfoElement.querySelectorAll('.Xsgmwe');
+        const airlineName = flightAirlineElements[0]?.textContent || '';
+        const aircraftModel = flightAirlineElements[3]?.textContent || '';
 
-            const airlineName = flightAirlineElements ? flightAirlineElements[0].textContent : '';
-            const aircraftModel = flightAirlineElements ? flightAirlineElements[3].textContent : '';
+        if (airlineName && !airlinesInTheJourney.includes(airlineName)) {
+            airlinesInTheJourney.push(airlineName);
+        }
 
-            if (airlineName && !airlinesInTheJourney.includes(airlineName)) {
-                airlinesInTheJourney.push(airlineName);
-            }
-
-            if (aircraftModel && !aircraftsInTheJourney.includes(aircraftModel)) {
-                aircraftsInTheJourney.push(aircraftModel);
-            }
+        if (aircraftModel && !aircraftsInTheJourney.includes(aircraftModel)) {
+            aircraftsInTheJourney.push(aircraftModel);
         }
     });
-
-    console.log("airlinesInTheJourney", airlinesInTheJourney);
-    console.log("aircraftsInTheJourney", aircraftsInTheJourney);
 
     return { airlinesInTheJourney, aircraftsInTheJourney };
 }
 
 async function attachActionButtons(flightElement: Element) {
-    console.log('attachActionButtons', flightElement);
     const flightInfoElement = flightElement.querySelector('.MX5RWe.sSHqwe.y52p7d');
-
-    console.log("flightInfoElement", flightInfoElement);
     if (!flightInfoElement) return;
 
     const buttonContainer = document.createElement('div');
@@ -51,16 +40,12 @@ async function attachActionButtons(flightElement: Element) {
     actionButton.classList.add('get-incident-data');
     actionButton.addEventListener('click', async () => {
         const { airlinesInTheJourney, aircraftsInTheJourney } = readJourneyDetails(flightElement);
-        const incidentData = await getIncidentData(airlinesInTheJourney, aircraftsInTheJourney);
-
-        // Send the message to Popup
-        chrome.runtime.sendMessage({ type: 'incidentData', data: incidentData });
+        await getIncidentData(airlinesInTheJourney, aircraftsInTheJourney);
     });
 
     buttonContainer.appendChild(actionButton);
 
     const style = document.createElement('style');
-
     style.textContent = `
         .get-incident-data {
             background-color: #007bff;
@@ -74,99 +59,76 @@ async function attachActionButtons(flightElement: Element) {
     `;
     document.head.appendChild(style);
 
-    console.log("buttonContainer", buttonContainer);
-
     flightInfoElement.appendChild(buttonContainer);
 
     const observer = new MutationObserver((mutations) => {
         mutations.forEach((mutation) => {
-            if (mutation.type === 'childList') {
-                const buttonContainerExists = flightInfoElement.querySelector('.incident-button-container');
-                if (!buttonContainerExists) {
-                    flightInfoElement.appendChild(buttonContainer);
-                }
+            if (mutation.type === 'childList' && !flightInfoElement.querySelector('.incident-button-container')) {
+                flightInfoElement.appendChild(buttonContainer);
             }
         });
     });
 
-    const config = { childList: true, subtree: true };
-    observer.observe(flightInfoElement, config);
+    observer.observe(flightInfoElement, { childList: true, subtree: true });
 }
 
 async function getIncidentData(airlinesInTheJourney: string[], aircraftsInTheJourney: string[]) {
-    console.log("isDev", isDev)
+    const [airlineIncidents, aircraftIncidents, riskLevelData] = await Promise.all([
+        Promise.all(airlinesInTheJourney.map(fetchMostRecentIncidentsByAirline)),
+        Promise.all(aircraftsInTheJourney.map(fetchMostRecentIncidentsByAircraft)),
+        await getRiskLevel(airlinesInTheJourney, aircraftsInTheJourney)
+    ]);
 
-    if (isDev)  {
-        chrome.runtime.sendMessage({ type: 'incidentData', data: { airlineIncidents: dummyAirlineIncidentData, aircraftIncidents: dummyAircraftIncidentData} });
+    console.log('Airline Incidents:', airlineIncidents);
+    console.log('Aircraft Incidents:', aircraftIncidents);
+    console.log('Risk Level Data:', riskLevelData);
 
-        chrome.runtime.sendMessage({ type: 'openPopup' });
+    const allIncidentData: AllData = {
+        airlineIncidents: airlineIncidents.flat(),
+        aircraftIncidents: aircraftIncidents.flat(),
+        airlinesInTheJourney,
+        aircraftsInTheJourney
+    };
 
-        return { airlineIncidents: dummyAirlineIncidentData, aircraftIncidents: dummyAircraftIncidentData };
+    if (!riskLevelData) {
+        console.error('Error getting risk level data');
+        chrome.runtime.sendMessage({ type: 'setIncidentData', data: { ...allIncidentData, riskScore: null, riskLevel: null } });
+        return { ...allIncidentData, riskScore: null, riskLevel: null };
     }
-    const airlineIncidents = await Promise.all(airlinesInTheJourney.map(fetchMostRecentIncidentsByAirline));
-    const aircraftIncidents = await Promise.all(aircraftsInTheJourney.map(fetchMostRecentIncidentsByAircraft));
 
-    console.log("airlineIncidents", airlineIncidents);
-    console.log("aircraftIncidents", aircraftIncidents);
+    const { riskScore, riskLevel } = riskLevelData;
 
-    // Send the incident data to the popup
-    chrome.runtime.sendMessage({ type: 'incidentData', data: { airlineIncidents, aircraftIncidents } });
+    chrome.runtime.sendMessage({ type: 'setIncidentData', data: { ...allIncidentData, riskScore, riskLevel } });
 
-    chrome.runtime.sendMessage({ type: 'openPopup' });
-
-
-    return { airlineIncidents, aircraftIncidents };
+    return { ...allIncidentData, riskScore, riskLevel };
 }
 
-// Function to attach click event listeners to aria-expand buttons
 function attachAriaExpandListeners() {
-    const ariaExpandButtons = document.querySelectorAll('button[aria-expanded]');
-    ariaExpandButtons.forEach((button) => {
+    document.querySelectorAll('button[aria-expanded]').forEach((button) => {
         button.addEventListener('click', () => {
             setTimeout(() => {
                 const flightElement = button.closest('li');
-                const incidentContainer = flightElement?.querySelector('.incident-container');
-
                 if (button.getAttribute('aria-expanded') === 'true') {
-                    if (flightElement) {
-                        attachActionButtons(flightElement);
-                    }
+                    flightElement && attachActionButtons(flightElement);
                 } else {
-                    if (incidentContainer) {
-                        incidentContainer.remove();
-                    }
+                    flightElement?.querySelector('.incident-container')?.remove();
                 }
-            }, 100); // Increased timeout duration
+            }, 100);
         });
     });
 }
 
-if (document.readyState !== 'complete') {
-    window.addEventListener('load', afterWindowLoaded);
-} else {
-    afterWindowLoaded();
-}
-
-function afterWindowLoaded() {
-    // Use a MutationObserver to detect when the h3 elements are added to the DOM
+function init() {
     const observer = new MutationObserver((mutations) => {
-        mutations.forEach((mutation) => {
-            if (mutation.type === 'childList') {
-                const addedNodes = mutation.addedNodes;
-                for (const node of addedNodes) {
-                    // @ts-ignore
-                    if (node.nodeType === Node.ELEMENT_NODE && node.tagName === 'H3') {
-                        attachAriaExpandListeners();
-                        break;
-                    }
-                }
-            }
-        });
+        // @ts-ignore
+        if (mutations.some(mutation => Array.from(mutation.addedNodes).some(node => node.nodeType === Node.ELEMENT_NODE && node.tagName === 'H3'))) {
+            attachAriaExpandListeners();
+        }
     });
 
-    // Configure the observer to watch for changes in the entire document body
-    const config = { childList: true, subtree: true };
-    observer.observe(document.body, config);
+    observer.observe(document.body, { childList: true, subtree: true });
 
     attachAriaExpandListeners();
 }
+
+document.readyState === 'complete' ? init() : window.addEventListener('load', init);

@@ -6,3 +6,10 @@ export interface IncidentData {
   fat: number
   location: string
 }
+
+export interface AllData {
+  airlineIncidents: IncidentData[];
+  aircraftIncidents: IncidentData[];
+  airlinesInTheJourney: string[];
+  aircraftsInTheJourney: string[];
+}

@@ -66,3 +66,22 @@ export async function fetchMostRecentIncidentsByAircraft(aircraft: string) {
   const incidents = await fetchIncidentData(endpoint)
   return incidents
 }
+
+
+export async function getRiskLevel(airlinesInTheJourney: string[], aircraftsInTheJourney: string[]) {
+  const endpoint = '/assess-journey-risk';
+
+  const response = await fetch(`${apiBase}${endpoint}`, {
+    method: 'POST',
+      headers: {
+          'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+          airlines: airlinesInTheJourney,
+          aircraft_types: aircraftsInTheJourney,
+      }),
+  })
+  const data = await response.json()
+
+  return response ? { riskScore: data.risk_score, riskLevel: data.risk_level } : null;
+}
