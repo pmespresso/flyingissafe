@@ -5,6 +5,8 @@ import { AllData, IncidentData } from '../types';
 
 export const Popup: React.FC = () => {
   const [incidentData, setIncidentData] = useState<AllData | null>(null);
+  const [latestFatalAircraftIncident, setLatestAircraftIncident] = useState<IncidentData | null>(null);
+  const [latestFatalAirlineIncident, setLatestAirlineIncident] = useState<IncidentData | null>(null);
 
   useEffect(() => {
     // Request the incident data from the background script
@@ -12,86 +14,69 @@ export const Popup: React.FC = () => {
       if (response) {
         console.log('Incident data:', response);
         setIncidentData(response);
+        const _latestFatalAircraftIncidents = getLatestFatalIncident(response.aircraftIncidents);
+        const _latestFatalAirlineIncidents =  getLatestFatalIncident(response.airlineIncidents);
+
+        setLatestAircraftIncident(_latestFatalAircraftIncidents);
+        setLatestAirlineIncident(_latestFatalAirlineIncidents);
       }
     });
   }, []);
 
   const getLatestFatalIncident = (incidents: IncidentData[]) => {
-    const fatalIncidents = incidents.filter((incident) => incident.fat > 0);
-    if (fatalIncidents.length > 0) {
-      return fatalIncidents[0];
+    if (incidents.length === 0) {
+      return null;
     }
-    return null;
-  };
 
-  const getRiskLevel = (incidentData: AllData) => {
-    const totalIncidents = incidentData.airlineIncidents.length + incidentData.aircraftIncidents.length;
-    if (totalIncidents === 0) {
-      return 'Low';
-    } else if (totalIncidents <= 3) {
-      return 'Moderate';
-    } else {
-      return 'High';
-    }
+    return incidents
+      .filter((incident) => incident.fat > 0)
+      .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())[0];
   };
 
   return (
     <main>
       <h1>Flight Safety Information</h1>
+      
       {incidentData ? (
         <>
-          <p>Your journey includes the following airlines and aircraft:</p>
+        <div className="risk-level">
+          <h2>Journey Risk Level: {incidentData.riskLevel}</h2>
+        </div>
           <div className="card leg-info">
             <div className="airline-info">
-              <h3>Airlines: {incidentData.airlinesInTheJourney.join(', ')}</h3>
-              {incidentData.airlinesInTheJourney.map((airline) => {
-                const airlineIncidents = incidentData.airlineIncidents.filter(
-                  (incident) => incident.operator === airline
-                );
-                return (
-                  <div key={airline}>
-                    <p>
-                      {airline}: {getLatestFatalIncident(airlineIncidents) ? (
-                        <>
-                          Latest fatal incident on {getLatestFatalIncident(airlineIncidents)!.date} at{' '}
-                          {getLatestFatalIncident(airlineIncidents)!.location} with{' '}
-                          {getLatestFatalIncident(airlineIncidents)!.fat} fatalities.
-                        </>
-                      ) : (
-                        'No fatal incidents.'
-                      )}
-                    </p>
-                  </div>
-                );
-              })}
+              <h3>Airline Incidents in Your Journey</h3>
+                <div >
+                  <h4>{latestFatalAirlineIncident?.operator}:</h4>
+                  <p>{latestFatalAirlineIncident ? (
+                      <>
+                        Latest fatal incident on {latestFatalAirlineIncident.date} with{' '}
+                        {latestFatalAirlineIncident.fat} fatalities.
+                      </>
+                    ) : (
+                      'No fatal incidents.'
+                    )}
+                  </p>
+                </div>
             </div>
             <div className="aircraft-info">
-              <h3>Aircraft: {incidentData.aircraftsInTheJourney.join(', ')}</h3>
-              {incidentData.aircraftsInTheJourney.map((aircraft) => {
-                const aircraftIncidents = incidentData.aircraftIncidents.filter(
-                  (incident) => incident.type === aircraft
-                );
-                return (
-                  <div key={aircraft}>
-                    <p>
-                      {aircraft}: {getLatestFatalIncident(aircraftIncidents) ? (
+              <h3>Aircraft Incidents in Your Journey</h3>
+                  <div key={latestFatalAircraftIncident?.type}>
+                    <h4>{latestFatalAircraftIncident?.type}:</h4>
+                    <p>{latestFatalAircraftIncident ? (
                         <>
-                          Latest fatal incident on {getLatestFatalIncident(aircraftIncidents)!.date} at{' '}
-                          {getLatestFatalIncident(aircraftIncidents)!.location} with{' '}
-                          {getLatestFatalIncident(aircraftIncidents)!.fat} fatalities.
+                          Latest fatal incident on {latestFatalAircraftIncident.date} at{' '}
+                          {latestFatalAircraftIncident.location} with{' '}
+                          {latestFatalAircraftIncident.fat} fatalities.
                         </>
                       ) : (
                         'No fatal incidents.'
                       )}
                     </p>
                   </div>
-                );
-              })}
+
             </div>
           </div>
-          <div className="risk-level">
-            <h2>Journey Risk Level: {getRiskLevel(incidentData)}</h2>
-          </div>
+          
         </>
       ) : (
         <p>Loading safety information...</p>

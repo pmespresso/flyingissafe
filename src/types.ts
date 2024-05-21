@@ -12,4 +12,6 @@ export interface AllData {
   aircraftIncidents: IncidentData[];
   airlinesInTheJourney: string[];
   aircraftsInTheJourney: string[];
+  riskScore: number | null;
+  riskLevel: string | null;
 }

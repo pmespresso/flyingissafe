@@ -1,6 +1,5 @@
 import { AllData } from "../types";
-import { fetchMostRecentIncidentsByAircraft, fetchMostRecentIncidentsByAirline, getRiskLevel, isDev } from "./api";
-import { dummyAircraftIncidentData, dummyAirlineIncidentData } from "./dev";
+import { fetchMostRecentFatalIncidentsByAircraft, fetchMostRecentFatalIncidentsByAirline, getRiskLevel } from "./api";
 
 function readJourneyDetails(flightElement: Element) {
     const flightLegs = flightElement.querySelectorAll('.c257Jb.eWArhb');
@@ -74,8 +73,8 @@ async function attachActionButtons(flightElement: Element) {
 
 async function getIncidentData(airlinesInTheJourney: string[], aircraftsInTheJourney: string[]) {
     const [airlineIncidents, aircraftIncidents, riskLevelData] = await Promise.all([
-        Promise.all(airlinesInTheJourney.map(fetchMostRecentIncidentsByAirline)),
-        Promise.all(aircraftsInTheJourney.map(fetchMostRecentIncidentsByAircraft)),
+        Promise.all(airlinesInTheJourney.map(fetchMostRecentFatalIncidentsByAirline)),
+        Promise.all(aircraftsInTheJourney.map(fetchMostRecentFatalIncidentsByAircraft)),
         await getRiskLevel(airlinesInTheJourney, aircraftsInTheJourney)
     ]);
 
@@ -87,20 +86,25 @@ async function getIncidentData(airlinesInTheJourney: string[], aircraftsInTheJou
         airlineIncidents: airlineIncidents.flat(),
         aircraftIncidents: aircraftIncidents.flat(),
         airlinesInTheJourney,
-        aircraftsInTheJourney
+        aircraftsInTheJourney,
+        riskScore: null, 
+        riskLevel: null
     };
 
     if (!riskLevelData) {
         console.error('Error getting risk level data');
-        chrome.runtime.sendMessage({ type: 'setIncidentData', data: { ...allIncidentData, riskScore: null, riskLevel: null } });
-        return { ...allIncidentData, riskScore: null, riskLevel: null };
+        chrome.runtime.sendMessage({ type: 'setIncidentData', data: allIncidentData });
+        return allIncidentData
     }
 
     const { riskScore, riskLevel } = riskLevelData;
 
-    chrome.runtime.sendMessage({ type: 'setIncidentData', data: { ...allIncidentData, riskScore, riskLevel } });
+    allIncidentData.riskScore = riskScore;
+    allIncidentData.riskLevel = riskLevel;
 
-    return { ...allIncidentData, riskScore, riskLevel };
+    chrome.runtime.sendMessage({ type: 'setIncidentData', data: allIncidentData });
+
+    return allIncidentData;
 }
 
 function attachAriaExpandListeners() {

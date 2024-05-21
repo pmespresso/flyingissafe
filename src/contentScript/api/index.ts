@@ -54,15 +54,15 @@ export async function fetchMostDangerousAircrafts(howMany: number = 10) {
 }
 
 // Function to fetch the most recent incidents by airline
-export async function fetchMostRecentIncidentsByAirline(airline: string) {
-  const endpoint = `/most-recent-incidents-by-airline/${encodeURIComponent(airline)}`
+export async function fetchMostRecentFatalIncidentsByAirline(airline: string) {
+  const endpoint = `/most-recent-fatal-incidents-by-airline/${encodeURIComponent(airline)}`
   const incidents = await fetchIncidentData(endpoint)
   return incidents
 }
 
 // Function to fetch the most recent incidents by aircraft
-export async function fetchMostRecentIncidentsByAircraft(aircraft: string) {
-  const endpoint = `/most-recent-incidents-by-aircraft/${encodeURIComponent(aircraft)}`
+export async function fetchMostRecentFatalIncidentsByAircraft(aircraft: string) {
+  const endpoint = `/most-recent-fatal-incidents-by-aircraft/${encodeURIComponent(aircraft)}`
   const incidents = await fetchIncidentData(endpoint)
   return incidents
 }
