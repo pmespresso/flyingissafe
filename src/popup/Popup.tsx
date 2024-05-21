@@ -4,8 +4,6 @@ import { AllData, FlightLeg, IncidentData } from '../types';
 
 export const Popup: React.FC = () => {
   const [incidentData, setIncidentData] = useState<AllData | null>(null);
-  const [latestFatalAircraftIncident, setLatestAircraftIncident] = useState<IncidentData | null>(null);
-  const [latestFatalAirlineIncident, setLatestAirlineIncident] = useState<IncidentData | null>(null);
 
   useEffect(() => {
     // Request the incident data from the background script
@@ -13,23 +11,16 @@ export const Popup: React.FC = () => {
       if (response) {
         console.log('Incident data:', response);
         setIncidentData(response);
-        const _latestFatalAircraftIncidents = getLatestFatalIncident(response.aircraftIncidents);
-        const _latestFatalAirlineIncidents = getLatestFatalIncident(response.airlineIncidents);
-
-        setLatestAircraftIncident(_latestFatalAircraftIncidents);
-        setLatestAirlineIncident(_latestFatalAirlineIncidents);
       }
     });
   }, []);
 
-  const getLatestFatalIncident = (incidents: IncidentData[], identifier?: string) => {
+  const getLatestFatalIncident = (incidents: IncidentData[]) => {
     if (incidents.length === 0) {
       return null;
     }
 
-    return incidents
-      .filter((incident) => incident.fat > 0 && (!identifier || incident.type === identifier || incident.operator === identifier))
-      .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())[0];
+    return incidents.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())[0];
   };
 
   return (
@@ -45,23 +36,23 @@ export const Popup: React.FC = () => {
             <p>For the journey you selected from A to B, you have {incidentData.journeyDetails.length} flight legs.</p>
           </div>
           {incidentData.journeyDetails.map((leg: FlightLeg, index) => {
-            const aircraftIncident = latestFatalAircraftIncident
-            const airlineIncident = latestFatalAirlineIncident
+            const latestAircraftIncident = getLatestFatalIncident(leg.aircraftIncidents);
+            const latestAirlineIncident = getLatestFatalIncident(leg.airlineIncidents);
 
             return (
               <div key={index} className="card leg-info">
                 <h3>Flight Leg {index + 1}</h3>
                 <p>You are on a {leg.aircraft} with {leg.airline}.</p>
-                {aircraftIncident ? (
+                {latestAircraftIncident ? (
                   <p>
-                    The last time a {aircraftIncident.type} had a fatal incident was on {aircraftIncident.date} with {aircraftIncident.fat} fatalities.
+                    The last time a {latestAircraftIncident.type} had a fatal incident was on {latestAircraftIncident.date} with {latestAircraftIncident.fat} fatalities.
                   </p>
                 ) : (
                   <p>No fatal incidents found for {leg.aircraft}.</p>
                 )}
-                {airlineIncident ? (
+                {latestAirlineIncident ? (
                   <p>
-                    The last time {airlineIncident.operator} had a fatal incident was on {airlineIncident.date} with {airlineIncident.fat} fatalities.
+                    The last time {latestAirlineIncident.operator} had a fatal incident was on {latestAirlineIncident.date} with {latestAirlineIncident.fat} fatalities.
                   </p>
                 ) : (
                   <p>No fatal incidents found for {leg.airline}.</p>

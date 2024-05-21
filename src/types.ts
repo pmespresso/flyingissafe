@@ -1,20 +1,21 @@
 export interface IncidentData {
-  date: string
-  type: string
-  reg: string
-  operator: string
-  fat: number
-  location: string
+  date: string;
+  dmg: string;
+  fat: number;
+  location: string;
+  operator: string;
+  reg: string;
+  type: string;
 }
 
 export interface FlightLeg {
-  airline: string;
   aircraft: string;
+  airline: string;
+  aircraftIncidents: IncidentData[];
+  airlineIncidents: IncidentData[];
 }
 
 export interface AllData {
-  airlineIncidents: IncidentData[];
-  aircraftIncidents: IncidentData[];
   journeyDetails: FlightLeg[];
   riskScore: number | null;
   riskLevel: string | null;
