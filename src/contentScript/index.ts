@@ -1,11 +1,11 @@
-import { AllData } from "../types";
+// content script
+import { AllData, FlightLeg } from "../types";
 import { fetchMostRecentFatalIncidentsByAircraft, fetchMostRecentFatalIncidentsByAirline, getRiskLevel } from "./api";
 
 function readJourneyDetails(flightElement: Element) {
     const flightLegs = flightElement.querySelectorAll('.c257Jb.eWArhb');
 
-    const airlinesInTheJourney: string[] = [];
-    const aircraftsInTheJourney: string[] = [];
+    const journeyDetails: FlightLeg[] = [];
 
     flightLegs.forEach((flightLeg: Element) => {
         const flightInfoElement = flightLeg.querySelector('.MX5RWe.sSHqwe.y52p7d');
@@ -15,18 +15,54 @@ function readJourneyDetails(flightElement: Element) {
         const airlineName = flightAirlineElements[0]?.textContent || '';
         const aircraftModel = flightAirlineElements[3]?.textContent || '';
 
-        if (airlineName && !airlinesInTheJourney.includes(airlineName)) {
-            airlinesInTheJourney.push(airlineName);
-        }
-
-        if (aircraftModel && !aircraftsInTheJourney.includes(aircraftModel)) {
-            aircraftsInTheJourney.push(aircraftModel);
+        if (airlineName && aircraftModel) {
+            journeyDetails.push({ airline: airlineName, aircraft: aircraftModel });
         }
     });
 
-    return { airlinesInTheJourney, aircraftsInTheJourney };
+    console.log(" === Journey Details === ")
+    console.log('Journey Details:', journeyDetails);
+
+    return journeyDetails;
 }
 
+async function getIncidentData(journeyDetails: FlightLeg[]) {
+    const airlinesInTheJourney = journeyDetails.map(leg => leg.airline);
+    const aircraftsInTheJourney = journeyDetails.map(leg => leg.aircraft);
+
+    const [airlineIncidents, aircraftIncidents, riskLevelData] = await Promise.all([
+        Promise.all(airlinesInTheJourney.map(fetchMostRecentFatalIncidentsByAirline)),
+        Promise.all(aircraftsInTheJourney.map(fetchMostRecentFatalIncidentsByAircraft)),
+        await getRiskLevel(airlinesInTheJourney, aircraftsInTheJourney)
+    ]);
+
+    console.log('Airline Incidents:', airlineIncidents);
+    console.log('Aircraft Incidents:', aircraftIncidents);
+    console.log('Risk Level Data:', riskLevelData);
+
+    const allIncidentData: AllData = {
+        airlineIncidents: airlineIncidents.flat(),
+        aircraftIncidents: aircraftIncidents.flat(),
+        journeyDetails,
+        riskScore: null,
+        riskLevel: null
+    };
+
+    if (!riskLevelData) {
+        console.error('Error getting risk level data');
+        chrome.runtime.sendMessage({ type: 'setIncidentData', data: allIncidentData });
+        return allIncidentData
+    }
+
+    const { riskScore, riskLevel } = riskLevelData;
+
+    allIncidentData.riskScore = riskScore;
+    allIncidentData.riskLevel = riskLevel;
+
+    chrome.runtime.sendMessage({ type: 'setIncidentData', data: allIncidentData });
+
+    return allIncidentData;
+}
 async function attachActionButtons(flightElement: Element) {
     const flightInfoElement = flightElement.querySelector('.MX5RWe.sSHqwe.y52p7d');
     if (!flightInfoElement) return;
@@ -38,8 +74,8 @@ async function attachActionButtons(flightElement: Element) {
     actionButton.textContent = 'Get Incident Data';
     actionButton.classList.add('get-incident-data');
     actionButton.addEventListener('click', async () => {
-        const { airlinesInTheJourney, aircraftsInTheJourney } = readJourneyDetails(flightElement);
-        await getIncidentData(airlinesInTheJourney, aircraftsInTheJourney);
+        const journeyDetails = readJourneyDetails(flightElement);
+        await getIncidentData(journeyDetails);
     });
 
     buttonContainer.appendChild(actionButton);
@@ -69,42 +105,6 @@ async function attachActionButtons(flightElement: Element) {
     });
 
     observer.observe(flightInfoElement, { childList: true, subtree: true });
-}
-
-async function getIncidentData(airlinesInTheJourney: string[], aircraftsInTheJourney: string[]) {
-    const [airlineIncidents, aircraftIncidents, riskLevelData] = await Promise.all([
-        Promise.all(airlinesInTheJourney.map(fetchMostRecentFatalIncidentsByAirline)),
-        Promise.all(aircraftsInTheJourney.map(fetchMostRecentFatalIncidentsByAircraft)),
-        await getRiskLevel(airlinesInTheJourney, aircraftsInTheJourney)
-    ]);
-
-    console.log('Airline Incidents:', airlineIncidents);
-    console.log('Aircraft Incidents:', aircraftIncidents);
-    console.log('Risk Level Data:', riskLevelData);
-
-    const allIncidentData: AllData = {
-        airlineIncidents: airlineIncidents.flat(),
-        aircraftIncidents: aircraftIncidents.flat(),
-        airlinesInTheJourney,
-        aircraftsInTheJourney,
-        riskScore: null, 
-        riskLevel: null
-    };
-
-    if (!riskLevelData) {
-        console.error('Error getting risk level data');
-        chrome.runtime.sendMessage({ type: 'setIncidentData', data: allIncidentData });
-        return allIncidentData
-    }
-
-    const { riskScore, riskLevel } = riskLevelData;
-
-    allIncidentData.riskScore = riskScore;
-    allIncidentData.riskLevel = riskLevel;
-
-    chrome.runtime.sendMessage({ type: 'setIncidentData', data: allIncidentData });
-
-    return allIncidentData;
 }
 
 function attachAriaExpandListeners() {

@@ -1,7 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import './Popup.css';
-import { AllData, IncidentData } from '../types';
-
+import { AllData, FlightLeg, IncidentData } from '../types';
 
 export const Popup: React.FC = () => {
   const [incidentData, setIncidentData] = useState<AllData | null>(null);
@@ -15,7 +14,7 @@ export const Popup: React.FC = () => {
         console.log('Incident data:', response);
         setIncidentData(response);
         const _latestFatalAircraftIncidents = getLatestFatalIncident(response.aircraftIncidents);
-        const _latestFatalAirlineIncidents =  getLatestFatalIncident(response.airlineIncidents);
+        const _latestFatalAirlineIncidents = getLatestFatalIncident(response.airlineIncidents);
 
         setLatestAircraftIncident(_latestFatalAircraftIncidents);
         setLatestAirlineIncident(_latestFatalAirlineIncidents);
@@ -23,13 +22,13 @@ export const Popup: React.FC = () => {
     });
   }, []);
 
-  const getLatestFatalIncident = (incidents: IncidentData[]) => {
+  const getLatestFatalIncident = (incidents: IncidentData[], identifier?: string) => {
     if (incidents.length === 0) {
       return null;
     }
 
     return incidents
-      .filter((incident) => incident.fat > 0)
+      .filter((incident) => incident.fat > 0 && (!identifier || incident.type === identifier || incident.operator === identifier))
       .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())[0];
   };
 
@@ -39,44 +38,37 @@ export const Popup: React.FC = () => {
       
       {incidentData ? (
         <>
-        <div className="risk-level">
-          <h2>Journey Risk Level: {incidentData.riskLevel}</h2>
-        </div>
-          <div className="card leg-info">
-            <div className="airline-info">
-              <h3>Airline Incidents in Your Journey</h3>
-                <div >
-                  <h4>{latestFatalAirlineIncident?.operator}:</h4>
-                  <p>{latestFatalAirlineIncident ? (
-                      <>
-                        Latest fatal incident on {latestFatalAirlineIncident.date} with{' '}
-                        {latestFatalAirlineIncident.fat} fatalities.
-                      </>
-                    ) : (
-                      'No fatal incidents.'
-                    )}
-                  </p>
-                </div>
-            </div>
-            <div className="aircraft-info">
-              <h3>Aircraft Incidents in Your Journey</h3>
-                  <div key={latestFatalAircraftIncident?.type}>
-                    <h4>{latestFatalAircraftIncident?.type}:</h4>
-                    <p>{latestFatalAircraftIncident ? (
-                        <>
-                          Latest fatal incident on {latestFatalAircraftIncident.date} at{' '}
-                          {latestFatalAircraftIncident.location} with{' '}
-                          {latestFatalAircraftIncident.fat} fatalities.
-                        </>
-                      ) : (
-                        'No fatal incidents.'
-                      )}
-                    </p>
-                  </div>
-
-            </div>
+          <div className="risk-level">
+            <h2>Journey Risk Level: {incidentData.riskLevel}</h2>
           </div>
-          
+          <div className="journey-info">
+            <p>For the journey you selected from A to B, you have {incidentData.journeyDetails.length} flight legs.</p>
+          </div>
+          {incidentData.journeyDetails.map((leg: FlightLeg, index) => {
+            const aircraftIncident = latestFatalAircraftIncident
+            const airlineIncident = latestFatalAirlineIncident
+
+            return (
+              <div key={index} className="card leg-info">
+                <h3>Flight Leg {index + 1}</h3>
+                <p>You are on a {leg.aircraft} with {leg.airline}.</p>
+                {aircraftIncident ? (
+                  <p>
+                    The last time a {aircraftIncident.type} had a fatal incident was on {aircraftIncident.date} with {aircraftIncident.fat} fatalities.
+                  </p>
+                ) : (
+                  <p>No fatal incidents found for {leg.aircraft}.</p>
+                )}
+                {airlineIncident ? (
+                  <p>
+                    The last time {airlineIncident.operator} had a fatal incident was on {airlineIncident.date} with {airlineIncident.fat} fatalities.
+                  </p>
+                ) : (
+                  <p>No fatal incidents found for {leg.airline}.</p>
+                )}
+              </div>
+            );
+          })}
         </>
       ) : (
         <p>Loading safety information...</p>

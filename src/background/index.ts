@@ -1,13 +1,24 @@
 import { AllData } from "../types";
 
+
 const setIncidentData = (data: AllData) => {
     console.log("SET:", data);
     chrome.storage.local.set({ incidentData: data }, () => {
         if (chrome.runtime.lastError) {
             console.error("Error setting incidentData:", chrome.runtime.lastError);
         } else {
-            // Open the popup programmatically
-            chrome.action.setPopup({ popup: 'popup.html' });
+            // show notification
+            const notificationOptions: any = {
+                type: 'basic',
+                iconUrl: 'img/logo-16.png',
+                title: 'Incident Data Updated',
+                message: 'The incident data has been updated.'
+            };
+
+            chrome.notifications.create('incidentDataUpdated', notificationOptions, (notificationId) => {
+                console.log('Notification created:', notificationId);
+            
+            });
         }
     });
 };
@@ -34,3 +45,4 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
         return true;
     }
 });
+

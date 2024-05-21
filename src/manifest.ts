@@ -31,11 +31,11 @@ export default defineManifest({
   ],
   web_accessible_resources: [
     {
-      resources: ['img/logo-16.png', 'img/logo-32.png', 'img/logo.png'],
+      resources: ['img/logo-16.png', 'img/logo-32.png', 'img/logo.png', 'icons/logo.svg', 'icons/logo.ico'],
       matches: [],
     },
   ],
-  permissions: ['storage'],
+  permissions: ['notifications', 'storage'],
   // chrome_url_overrides: {
   //   newtab: 'newtab.html',
   // },

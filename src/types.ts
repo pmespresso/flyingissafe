@@ -7,11 +7,15 @@ export interface IncidentData {
   location: string
 }
 
+export interface FlightLeg {
+  airline: string;
+  aircraft: string;
+}
+
 export interface AllData {
   airlineIncidents: IncidentData[];
   aircraftIncidents: IncidentData[];
-  airlinesInTheJourney: string[];
-  aircraftsInTheJourney: string[];
+  journeyDetails: FlightLeg[];
   riskScore: number | null;
   riskLevel: string | null;
 }
