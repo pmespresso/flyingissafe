@@ -26,14 +26,6 @@ export async function fetchLatestFatalIncidentByAirline(airline: string) {
 
 // Function to fetch the latest fatal incident by aircraft
 export async function fetchLatestFatalIncidentByAircraft(aircraft: string) {
-  if (aircraft.includes('Havilland')) {
-    // Rename because in the API it's "DHC", and append teh Dash-8 or whatever model it is
-    const aircraftParts = aircraft.split(' ')
-    const aircraftModel = aircraftParts.pop()
-    const aircraftType = aircraftParts.join(' ')
-    aircraft = `DHC-${aircraftModel}`
-  }
-
   const endpoint = `/latest-fatal-incident-by-aircraft/${encodeURIComponent(aircraft)}`
   const incident = await fetchIncidentData(endpoint)
   return incident

@@ -25,9 +25,6 @@ function readJourneyDetails(flightElement: Element): FlightLeg[] {
         }
     });
 
-    console.log(" === Journey Details === ")
-    console.log('Journey Details:', journeyDetails);
-
     return journeyDetails;
 }
 async function getIncidentData(journeyDetails: FlightLeg[]) {
@@ -39,9 +36,6 @@ async function getIncidentData(journeyDetails: FlightLeg[]) {
       leg.airlineIncidents = airlineIncidents[index];
       leg.aircraftIncidents = aircraftIncidents[index];
     });
-  
-    console.log('Journey Details with Incidents:', journeyDetails);
-    console.log('Risk Level Data:', riskLevelData);
   
     const allIncidentData: AllData = {
       journeyDetails,
@@ -62,25 +56,73 @@ async function attachActionButtons(flightElement: Element) {
     buttonContainer.classList.add('incident-button-container');
 
     const actionButton = document.createElement('button');
-    actionButton.textContent = 'Get Incident Data';
     actionButton.classList.add('get-incident-data');
+
+    const logoImg = document.createElement('img');
+    logoImg.src = chrome.runtime.getURL('img/logo.png');
+    logoImg.alt = 'Logo';
+    logoImg.width = 18;
+    logoImg.height = 18;
+    actionButton.appendChild(logoImg);
+
+    const buttonText = document.createElement('span');
+    buttonText.textContent = 'Get Incident Data';
+    actionButton.appendChild(buttonText);
+
+
     actionButton.addEventListener('click', async () => {
+        console.log('Click event...');
+        actionButton.disabled = true;
+        actionButton.textContent = 'Loading...';
+
         const journeyDetails = readJourneyDetails(flightElement);
-        await getIncidentData(journeyDetails);
+        try {
+            await getIncidentData(journeyDetails);
+            actionButton.textContent = 'Success! Check Popup for Details.';
+            actionButton.classList.add('success');
+        } catch (error) {
+            console.error('Error getting incident data:', error);
+            actionButton.textContent = 'Error';
+            actionButton.classList.add('error');
+        } finally {
+            actionButton.disabled = false;
+        }
     });
 
     buttonContainer.appendChild(actionButton);
 
+
     const style = document.createElement('style');
     style.textContent = `
         .get-incident-data {
-            background-color: #007bff;
-            color: white;
+            display: flex;
+            align-items: center;
+            background-color: #fff;
+            color: #007bff;
             border: none;
             padding: 5px 10px;
             border-radius: 5px;
             margin-top: 10px;
             cursor: pointer;
+        }
+
+        .get-incident-data img {
+            margin-right: 5px;
+        }
+        
+        .get-incident-data:disabled {
+            background-color: #ccc;
+            cursor: not-allowed;
+        }
+
+        .get-incident-data.success {
+            background-color: #28a745;
+            color: white;
+        }
+
+        .get-incident-data.error {
+            background-color: #dc3545;
+            color: white;
         }
     `;
     document.head.appendChild(style);

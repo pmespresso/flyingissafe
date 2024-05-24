@@ -1,5 +1,7 @@
 main {
-  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  font-family: "League Spartan", sans-serif;
+  font-optical-sizing: auto;
+  font-style: normal;
   padding: 20px;
   width: 400px;
   background-color: #f5f5f5;
@@ -28,6 +30,17 @@ p {
   font-size: 14px;
   line-height: 1.5;
   color: "#333";
+}
+
+.popup-heading {
+  display: flex;
+  justify-content: start;
+  align-items: center;
+  margin-bottom: 20px;
+}
+
+.popup-logo {
+  margin-right: 10px;
 }
 
 .card {
@@ -63,4 +76,50 @@ a {
 
 a:hover {
   text-decoration: underline;
+}
+
+.risk-high {
+  color: red;
+}
+
+.risk-medium {
+  color: orange;
+}
+
+.risk-low {
+  color: green;
+}
+
+.high-risk {
+  border: 2px solid red;
+}
+
+.risk-warning {
+  color: red;
+  font-weight: bold;
+}
+
+.incident-info {
+  padding: 10px;
+  border-radius: 5px;
+}
+
+.incident-info.fatal-recent {
+  background-color: #ff4d4f;
+  color: white;
+}
+
+.incident-info.fatal-old {
+  background-color: #ff7875;
+  color: white;
+}
+
+.incident-info.nonfatal-recent {
+  background-color: #ffa940;
+  color: white;
+}
+
+.incident-info.nonfatal-old {
+  background-color: #ffc069;
+  color: white;
 }
