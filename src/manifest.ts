@@ -10,8 +10,6 @@ export default defineManifest({
   version: packageData.version,
   manifest_version: 3,
   icons: {
-    16: 'img/logo-16.png',
-    32: 'img/logo-32.png',
     128: 'img/logo.png',
   },
   action: {
@@ -31,7 +29,7 @@ export default defineManifest({
   ],
   web_accessible_resources: [
     {
-      resources: ['img/logo-16.png', 'img/logo-32.png', 'img/logo.png', 'icons/logo.svg', 'icons/logo.ico'],
+      resources: ['img/logo.png', 'icons/logo.svg'],
       matches: [],
     },
   ],
