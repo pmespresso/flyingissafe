@@ -1,5 +1,6 @@
 // src/newtab/NewTab.tsx
-import React, { useEffect, useState } from 'react'
+import React, { useCallback, useEffect, useState } from 'react'
+import Chart from 'chart.js/auto'
 import './NewTab.css'
 import Footer from '../Footer'
 
@@ -24,6 +25,8 @@ const NewTab: React.FC = () => {
   const [mostDangerousAircrafts, setMostDangerousAircrafts] = useState<MostDangerousAircraftData[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
+
+  
 
   useEffect(() => {
     const fetchData = async () => {
@@ -62,16 +65,81 @@ const NewTab: React.FC = () => {
       }
     }
     fetchData()
+
   }, [])
 
-  if (loading) {
-    return (
-      <div className="loading-container">
-        <div className="loading-spinner"></div>
-        <p>Loading...</p>
-      </div>
-    )
-  }
+
+ 
+  const createAirlinesChart = useCallback(() => {
+    const ctx = document.getElementById('airlinesChart') as HTMLCanvasElement
+    if (ctx) {
+      new Chart(ctx, {
+        type: 'bar',
+        data: {
+          labels: mostDangerousAirlines.map((airline) => airline.operator),
+          datasets: [
+            {
+              label: 'Total Incidents',
+              data: mostDangerousAirlines.map((airline) => airline.total_incidents),
+              backgroundColor: 'rgba(75, 192, 192, 0.6)',
+            },
+            {
+              label: 'Total Fatalities',
+              data: mostDangerousAirlines.map((airline) => airline.total_fatalities),
+              backgroundColor: 'rgba(255, 99, 132, 0.6)',
+            },
+          ],
+        },
+        options: {
+          responsive: true,
+          scales: {
+            y: {
+              beginAtZero: true,
+            },
+          },
+        },
+      })
+    }
+  }, [mostDangerousAirlines])
+
+  const createAircraftsChart = useCallback(() => {
+    const ctx = document.getElementById('aircraftsChart') as HTMLCanvasElement
+    if (ctx) {
+      new Chart(ctx, {
+        type: 'bar',
+        data: {
+          labels: mostDangerousAircrafts.map((aircraft) => aircraft.type),
+          datasets: [
+            {
+              label: 'Total Incidents',
+              data: mostDangerousAircrafts.map((aircraft) => aircraft.total_incidents),
+              backgroundColor: 'rgba(75, 192, 192, 0.6)',
+            },
+            {
+              label: 'Total Fatalities',
+              data: mostDangerousAircrafts.map((aircraft) => aircraft.total_fatalities),
+              backgroundColor: 'rgba(255, 99, 132, 0.6)',
+            },
+          ],
+        },
+        options: {
+          responsive: true,
+          scales: {
+            y: {
+              beginAtZero: true,
+            },
+          },
+        },
+      })
+    }
+  }, [mostDangerousAircrafts])
+
+  useEffect(() => {
+    if (!loading) {
+      createAirlinesChart()
+      createAircraftsChart()
+    }
+  }, [loading, mostDangerousAirlines, mostDangerousAircrafts])
 
   if (error) {
     return (
@@ -83,61 +151,30 @@ const NewTab: React.FC = () => {
 
   return (
     <main className="dashboard">
-      <header>
-        <h1>Flight Incidents Tracker</h1>
+      <header className='header'>
+        <div className='title'>
+          <img src='/img/logo.png' alt="Flight Incidents Tracker Logo" height={50} width={50} /> 
+          <h1>Flight Incidents Tracker</h1>
+        </div>
+        <div className='tagline'>
+          <img src="/img/chrome-logo.png" alt="Chrome Logo" height={50} width={80} />
+          <h2>The #1 Chrome Extension To Avoid Accidentally Taking a Boeing 737 MAX</h2>
+        </div>
         <p>Data sourced from: <a href="https://aviation-safety.net/database/">Aviation Safety Network</a></p>
       </header>
       <section className="incidents-container">
-      <div className="incident-list">
-          <h2>Most Dangerous Airlines</h2>
-          <ul>
-            {mostDangerousAirlines.map((airline, index) => (
-              <li key={index}>
-                <div className="airline-info">
-                  <h3>{airline.operator}</h3>
-                  <div className="airline-details">
-                    <div className="detail-item">
-                      <span className="icon">📊</span>
-                      <span className="label">Total Incidents:</span>
-                      <span className="value">{airline.total_incidents}</span>
-                    </div>
-                    <div className="detail-item">
-                      <span className="icon">💔</span>
-                      <span className="label">Total Fatalities:</span>
-                      <span className="value">{airline.total_fatalities}</span>
-                    </div>
-                  </div>
-                </div>
-              </li>
-            ))}
-          </ul>
-        </div>
         <div className="incident-list">
-          <h2>Most Dangerous Aircrafts</h2>
-          <ul>
-            {mostDangerousAircrafts.map((aircraft, index) => (
-              <li key={index}>
-                <div className="aircraft-info">
-                  <h3>{aircraft.type}</h3>
-                  <div className="aircraft-details">
-                    <div className="detail-item">
-                      <span className="icon">📊</span>
-                      <span className="label">Total Incidents:</span>
-                      <span className="value">{aircraft.total_incidents}</span>
-                    </div>
-                    <div className="detail-item">
-                      <span className="icon">💔</span>
-                      <span className="label">Total Fatalities:</span>
-                      <span className="value">{aircraft.total_fatalities}</span>
-                    </div>
-                  </div>
-                </div>
-              </li>
-            ))}
-          </ul>
+          <h2>Most Dangerous Airlines (Civilian and Military)</h2>
+          <canvas id="airlinesChart"></canvas>
+        </div>
+
+        <div className="incident-list">
+          <h2>Most Dangerous Aircrafts (Civilian and Military)</h2>
+          <canvas id="aircraftsChart"></canvas>
+        
         </div>
       </section>
-            <Footer />
+        <Footer />
     </main>
   )
 }

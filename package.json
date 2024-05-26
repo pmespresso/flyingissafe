@@ -30,6 +30,7 @@
     "zip": "npm run build && node src/zip.js"
   },
   "dependencies": {
+    "chart.js": "^4.4.3",
     "react": "^18.2.0",
     "react-dom": "^18.2.0"
   },
