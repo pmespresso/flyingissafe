@@ -3,6 +3,7 @@ import React, { useCallback, useEffect, useState } from 'react'
 import Chart from 'chart.js/auto'
 import './NewTab.css'
 import Footer from '../Footer'
+import { IncidentData } from '../types'
 
 export const isDev = process.env.NODE_ENV == 'development'
 
@@ -20,14 +21,23 @@ export interface MostDangerousAircraftData {
   total_fatalities: number
 }
 
+export interface UniqueAirline {
+  operator: string
+}
+
+export interface IncidentDataByAirline extends Omit<IncidentData, 'fatalities'> {
+  fatalities: number
+}
+
 const NewTab: React.FC = () => {
   const [mostDangerousAirlines, setMostDangerousAirlines] = useState<MostDangerousAirlineData[]>([])
   const [mostDangerousAircrafts, setMostDangerousAircrafts] = useState<MostDangerousAircraftData[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
-
+  const [selectedAirline, setSelectedAirline] = useState('')
+  const [airlineIncidents, setAirlineIncidents] = useState<IncidentDataByAirline[]>([])
+  const [uniqueAirlines, setUniqueAirlines] = useState<UniqueAirline[]>([])
   
-
   useEffect(() => {
     const fetchData = async () => {
       try {
@@ -58,6 +68,10 @@ const NewTab: React.FC = () => {
           setMostDangerousAircrafts(aircraftsData)
           setLoading(false)
         }
+        const uniqueAirlinesResponse = await fetch(`${apiBase}/all-unique-airlines`)
+        const uniqueAirlinesData = await uniqueAirlinesResponse.json()
+        
+        setUniqueAirlines(uniqueAirlinesData)
       } catch (error) {
         console.error('Error fetching data:', error)
         setError('Failed to fetch data. Please try again later.')
@@ -65,10 +79,7 @@ const NewTab: React.FC = () => {
       }
     }
     fetchData()
-
   }, [])
-
-
  
   const createAirlinesChart = useCallback(() => {
     const ctx = document.getElementById('airlinesChart') as HTMLCanvasElement
@@ -141,6 +152,21 @@ const NewTab: React.FC = () => {
     }
   }, [loading, mostDangerousAirlines, mostDangerousAircrafts])
 
+  const handleAirlineChange = useCallback(async (event: React.ChangeEvent<HTMLSelectElement>) => {
+    const airline = event.target.value
+    setSelectedAirline(airline)
+
+    try {
+      const response = await fetch(`${apiBase}/all-incidents-by-airline/${encodeURIComponent(airline)}`)
+      const data = await response.json()
+
+      setAirlineIncidents(data.data)
+    } catch (error) {
+      console.error('Error fetching airline incidents:', error)
+      setError('Failed to fetch airline incidents. Please try again later.')
+    }
+  }, [])
+
   if (error) {
     return (
       <div className="error-container">
@@ -162,6 +188,7 @@ const NewTab: React.FC = () => {
         </div>
         <p>Data sourced from: <a href="https://aviation-safety.net/database/">Aviation Safety Network</a></p>
       </header>
+      
       <section className="incidents-container">
         <div className="incident-list">
           <h2>Most Dangerous Airlines (Civilian and Military)</h2>
@@ -171,10 +198,50 @@ const NewTab: React.FC = () => {
         <div className="incident-list">
           <h2>Most Dangerous Aircrafts (Civilian and Military)</h2>
           <canvas id="aircraftsChart"></canvas>
-        
         </div>
       </section>
-        <Footer />
+
+      <section className="airline-incidents-container">
+        <h2>Airline Incidents</h2>
+        <select value={selectedAirline} onChange={handleAirlineChange} className="airline-select">
+          <option value="">Select an airline</option>
+          {uniqueAirlines.map((airline) => (
+            <option key={airline.operator} value={airline.operator}>
+              {airline.operator}
+            </option>
+          ))}
+        </select>
+        {selectedAirline && (
+          <ul className="airline-incidents-list">
+            {airlineIncidents.map((incident, index) => (
+              <li key={index} className="airline-incident-item">
+                <div className="airline-incident-info">
+                  <h3>{incident.type}</h3>
+                  <div className="airline-incident-details">
+                    <div className="detail-item">
+                      <span className="icon">📅</span>
+                      <span className="label">Date:</span>
+                      <span className="value">{incident.date}</span>
+                    </div>
+                    <div className="detail-item">
+                      <span className="icon">💔</span>
+                      <span className="label">Fatalities:</span>
+                      <span className="value">{incident.fatalities}</span>
+                    </div>
+                    <div className="detail-item">
+                      <span className="icon">📍</span>
+                      <span className="label">Location:</span>
+                      <span className="value">{incident.location}</span>
+                    </div>
+                  </div>
+                </div>
+              </li>
+            ))}
+          </ul>
+        )}
+      </section>
+
+      <Footer />
     </main>
   )
 }
